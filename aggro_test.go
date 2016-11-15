@@ -19,13 +19,6 @@ func TestFull(t *testing.T) {
 		},
 	}
 
-	/*
-	   type Dataset struct {
-	   	Table Table
-	   	Rows  [][]Cell
-	   }
-
-	*/
 	dataset := &Dataset{
 		Table: table,
 	}

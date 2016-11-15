@@ -1,7 +1,6 @@
 package aggro
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -72,42 +71,40 @@ func (p *queryProcessor) aggregate() {
 	}
 }
 func (p *queryProcessor) recurse(depth, index int, row *queryRow, aggregate *Bucket, results map[string]*ResultBucket) map[string]*ResultBucket {
+	// If there's no aggregate, we're done.
 	if aggregate == nil {
 		return results
 	}
-	// As long as we continue to have an aggregate bucket, loop.
-	// For each of our rows, we need to add the value to exactly one bucket.
-	// On the first aggregate, we add new buckets to the rootBuckets field,
-	// whereas any other loop just adds to a lazily loaded bucket in the tree.
-	// When there are no buckets left, we append the row itself as this is where
-	// the data that is measured comes from.
 
-	// for aggregate != nil {
+	// Grab the cell that we're aggregating on.
 	cell := row.Data[aggregate.Field.Name]
 	if !cell.IsAggregatable() {
 		p.err = fmt.Errorf("Non aggregatable cell found at depth %d, index %d", depth, index)
 		return results
 	}
+
+	// And grab the underlying aggregatable string value.
 	value := cell.AggregatableCell().Value()
+
+	// Ensure we have a result bucket for this value, making on if we don't.
 	bucket := results[value]
 	if bucket == nil {
-		bucket = &ResultBucket{Value: value}
-	}
-	children := bucket.Buckets
-	if children == nil {
-		children = map[string]*ResultBucket{}
-		bucket.Buckets = children
+		bucket = &ResultBucket{
+			Value:   value,
+			Buckets: map[string]*ResultBucket{},
+		}
 	}
 
-	// If there's no next bucket, we're at the deepest point. Add data.
+	// If there's no next bucket, we're at the deepest point. Add data to measure.
 	if aggregate.Bucket == nil {
 		bucket.sourceRows = append(bucket.sourceRows, row.Data)
 		p.tipBuckets[bucket] = true
 	}
 
-	fmt.Println("All", results)
+	// Bump depth and recurse to next level, passing in the children as the results.
 	depth++
-	bucket.Buckets = p.recurse(depth, index, row, aggregate.Bucket, children)
+	bucket.Buckets = p.recurse(depth, index, row, aggregate.Bucket, bucket.Buckets)
+	// Update the current results bucket with the new values, then return.
 	results[value] = bucket
 	return results
 }
@@ -116,6 +113,4 @@ func (p *queryProcessor) measure() {
 	if p.err != nil {
 		return
 	}
-	m, _ := json.MarshalIndent(p, "", "  ")
-	fmt.Printf("%s\n", string(m))
 }

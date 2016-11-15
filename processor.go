@@ -113,4 +113,29 @@ func (p *queryProcessor) measure() {
 	if p.err != nil {
 		return
 	}
+
+	//sourceRows []map[string]Cell
+	for bucket, _ := range p.tipBuckets {
+		// Create measurers for each of the metrics, then feed data into them.
+		measurers := make([]measurer, len(p.query.Metrics))
+		for i, metric := range p.query.Metrics {
+			measurers[i], p.err = metric.measurer()
+			if p.err != nil {
+				return
+			}
+		}
+
+		for i := range p.query.Metrics {
+			metric := &p.query.Metrics[i]
+			for j := range bucket.sourceRows {
+				row := bucket.sourceRows[j]
+				measurers[i].AddDatum(row[metric.Field].MeasurableCell().Value())
+			}
+		}
+		bucket.Metrics = map[string]interface{}{}
+		for i, _ := range p.query.Metrics {
+			metric := &p.query.Metrics[i]
+			bucket.Metrics[metric.Field+":"+metric.Type] = measurers[i].Result()
+		}
+	}
 }

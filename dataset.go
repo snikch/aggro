@@ -126,7 +126,7 @@ type AggregatableCell interface {
 }
 
 type MeasurableCell interface {
-	// TBD Value() string
+	Value() interface{}
 }
 
 type NumberCell struct {
@@ -145,7 +145,7 @@ func (cell *NumberCell) IsMetricable() bool {
 	return true
 }
 
-func (cell *NumberCell) Value() *decimal.Decimal {
+func (cell *NumberCell) Value() interface{} { //*decimal.Decimal {
 	return cell.value
 }
 
@@ -173,7 +173,7 @@ func (cell *DatetimeCell) IsMetricable() bool {
 	return true
 }
 
-func (cell *DatetimeCell) Value() *time.Time {
+func (cell *DatetimeCell) Value() interface{} { //*time.Time {
 	return cell.value
 }
 

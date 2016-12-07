@@ -54,15 +54,28 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 		return results
 	}
 
-	// Grab the cell that we're aggregating on.
-	cell := row[aggregate.Field.Name]
-	if !cell.IsAggregatable() {
-		p.err = fmt.Errorf("Non aggregatable cell found at depth %d, index %d", depth, index)
+	// Ensure we have the details required to bucket on.
+	if aggregate.Field.Type == "datetime" && aggregate.DatetimeOptions == nil {
+		p.err = errors.New("Bucketing by datetime without DatetimeOptions set")
 		return results
 	}
 
+	// Grab the cell that we're aggregating on.
+	cell := row[aggregate.Field.Name]
 	// And grab the underlying aggregatable string value.
-	value := cell.AggregatableCell().Value()
+	value := ""
+	switch tCell := cell.(type) {
+	case *StringCell:
+		value = tCell.value
+	case *DatetimeCell:
+		value, p.err = tCell.ValueForPeriod(aggregate.DatetimeOptions.Period)
+		if p.err != nil {
+			return results
+		}
+	default:
+		p.err = fmt.Errorf("Non aggregatable cell found at depth %d, index %d", depth, index)
+		return results
+	}
 
 	// Ensure we have a result bucket for this value, making on if we don't.
 	bucket := results[value]
@@ -93,7 +106,7 @@ func (p *queryProcessor) measure() {
 	}
 
 	//sourceRows []map[string]Cell
-	for bucket, _ := range p.tipBuckets {
+	for bucket := range p.tipBuckets {
 		// Create measurers for each of the metrics, then feed data into them.
 		measurers := make([]measurer, len(p.query.Metrics))
 		for i, metric := range p.query.Metrics {

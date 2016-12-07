@@ -1,6 +1,28 @@
 package aggro
 
-import "github.com/shopspring/decimal"
+import (
+	"fmt"
+
+	"github.com/shopspring/decimal"
+)
+
+type Metric struct {
+	Type  string
+	Field string
+}
+
+func (m *Metric) measurer() (measurer, error) {
+	switch m.Type {
+	case "avg":
+		return &averager{}, nil
+	case "min":
+		return &min{}, nil
+	case "max":
+		return &max{}, nil
+	default:
+		return nil, fmt.Errorf("Unknown metric: %s", m.Type)
+	}
+}
 
 type measurer interface {
 	AddDatum(interface{})

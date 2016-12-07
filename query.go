@@ -1,6 +1,6 @@
 package aggro
 
-import "fmt"
+import "time"
 
 type Query struct {
 	Bucket  *Bucket
@@ -8,24 +8,26 @@ type Query struct {
 }
 
 type Bucket struct {
-	Bucket *Bucket
-	Field  *Field
+	Bucket          *Bucket
+	Field           *Field
+	DatetimeOptions *DatetimeBucketOptions
 }
 
-type Metric struct {
-	Type  string
-	Field string
-}
+type DatetimePeriod string
 
-func (m *Metric) measurer() (measurer, error) {
-	switch m.Type {
-	case "avg":
-		return &averager{}, nil
-	case "min":
-		return &min{}, nil
-	case "max":
-		return &max{}, nil
-	default:
-		return nil, fmt.Errorf("Unknown metric: %s", m.Type)
-	}
+const (
+	Year    DatetimePeriod = "year"
+	Quarter DatetimePeriod = "quarter"
+	Month   DatetimePeriod = "month"
+	Week    DatetimePeriod = "week"
+	Day     DatetimePeriod = "hour"
+)
+
+// DatetimeBucketOptions provides additional configuration for datetime bucketing.
+type DatetimeBucketOptions struct {
+	// Start will, if provided, ensure buckets start at this date.
+	Start *time.Time
+	// End will, if provided, ensure buckets continue to this date.
+	End    *time.Time
+	Period DatetimePeriod
 }

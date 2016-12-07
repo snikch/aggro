@@ -177,12 +177,29 @@ func (cell *DatetimeCell) Value() interface{} { //*time.Time {
 	return cell.value
 }
 
-func (cell *DatetimeCell) AggregatableCell() AggregatableCell {
-	return nil
-}
-
 func (cell *DatetimeCell) MeasurableCell() MeasurableCell {
 	return cell
+}
+
+// ValueForPeriod returns the start of a given period.
+func (cell *DatetimeCell) ValueForPeriod(period DatetimePeriod) (string, error) {
+	switch period {
+	case Year:
+		return time.Date(cell.value.Year(), 1, 1, 0, 0, 0, 0, cell.value.Location()).Format(time.RFC3339), nil
+	case Quarter:
+		// Get the month, but as a quarter start, rather than month start.
+		month := (((cell.value.Month() - 1) / 3) * 3) + 1
+		return time.Date(cell.value.Year(), month, 1, 0, 0, 0, 0, cell.value.Location()).Format(time.RFC3339), nil
+	case Month:
+		return time.Date(cell.value.Year(), cell.value.Month(), 1, 0, 0, 0, 0, cell.value.Location()).Format(time.RFC3339), nil
+	case Week:
+		day := cell.value.Day() - int(cell.value.Weekday())
+		return time.Date(cell.value.Year(), cell.value.Month(), day, 0, 0, 0, 0, cell.value.Location()).Format(time.RFC3339), nil
+	case Day:
+		return time.Date(cell.value.Year(), cell.value.Month(), cell.value.Day(), 0, 0, 0, 0, cell.value.Location()).Format(time.RFC3339), nil
+	default:
+		return "", fmt.Errorf("Unknown datetime period: %s", period)
+	}
 }
 
 type StringCell struct {

@@ -33,7 +33,8 @@ func (set *Dataset) AddRows(rows ...map[string]interface{}) error {
 				return fmt.Errorf("Error adding row %d, cell %d: Data key %s not present", i, j, field.Name)
 			}
 			if datum == nil {
-				return fmt.Errorf("Error adding row %d, cell %d: Data key %s is nil", i, j, field.Name)
+				// Skip if datum is nil
+				continue
 			}
 
 			row[field.Name], err = newCell(datum, &field)
@@ -50,10 +51,12 @@ const (
 	fieldTypeString   = "string"
 	fieldTypeNumber   = "number"
 	fieldTypeDatetime = "datetime"
+	fieldTypeBool     = "bool"
 )
 
 func newCell(datum interface{}, field *Field) (Cell, error) {
 	var cell Cell
+
 	switch field.Type {
 	case fieldTypeString:
 		stringValue, ok := datum.(string)

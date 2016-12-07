@@ -48,6 +48,7 @@ func (p *queryProcessor) aggregate() {
 		Buckets: buckets,
 	}
 }
+
 func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregate *Bucket, results map[string]*ResultBucket) map[string]*ResultBucket {
 	// If there's no aggregate, we're done.
 	if aggregate == nil {
@@ -56,8 +57,15 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 
 	// Grab the cell that we're aggregating on.
 	cell := row[aggregate.Field.Name]
+
+	// If cell was empty, we can ignore it.
+	if cell == nil {
+		return results
+	}
+
+	// Check we can aggregate this cell.
 	if !cell.IsAggregatable() {
-		p.err = fmt.Errorf("Non aggregatable cell found at depth %d, index %d", depth, index)
+		p.err = fmt.Errorf("Non aggregatable cell found (`%s`) at depth %d, index %d", aggregate.Field.Name, depth, index)
 		return results
 	}
 
@@ -82,6 +90,7 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 	// Bump depth and recurse to next level, passing in the children as the results.
 	depth++
 	bucket.Buckets = p.recurse(depth, index, row, aggregate.Bucket, bucket.Buckets)
+
 	// Update the current results bucket with the new values, then return.
 	results[value] = bucket
 	return results
@@ -107,7 +116,13 @@ func (p *queryProcessor) measure() {
 			metric := &p.query.Metrics[i]
 			for j := range bucket.sourceRows {
 				row := bucket.sourceRows[j]
-				measurers[i].AddDatum(row[metric.Field].MeasurableCell().Value())
+				if !row[metric.Field].IsMetricable() {
+					p.err = fmt.Errorf("Non metricable cell found (`%s`)", metric.Field)
+					return
+				}
+				if row[metric.Field].MeasurableCell() != nil {
+					measurers[i].AddDatum(row[metric.Field].MeasurableCell().Value())
+				}
 			}
 		}
 		bucket.Metrics = map[string]interface{}{}

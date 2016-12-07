@@ -51,7 +51,6 @@ const (
 	fieldTypeString   = "string"
 	fieldTypeNumber   = "number"
 	fieldTypeDatetime = "datetime"
-	fieldTypeBool     = "bool"
 )
 
 func newCell(datum interface{}, field *Field) (Cell, error) {

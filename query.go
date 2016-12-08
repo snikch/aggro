@@ -13,16 +13,6 @@ type Bucket struct {
 	DatetimeOptions *DatetimeBucketOptions
 }
 
-type DatetimePeriod string
-
-const (
-	Year    DatetimePeriod = "year"
-	Quarter DatetimePeriod = "quarter"
-	Month   DatetimePeriod = "month"
-	Week    DatetimePeriod = "week"
-	Day     DatetimePeriod = "hour"
-)
-
 // DatetimeBucketOptions provides additional configuration for datetime bucketing.
 type DatetimeBucketOptions struct {
 	// Start will, if provided, ensure buckets start at this date.

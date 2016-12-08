@@ -169,9 +169,9 @@ func TestBucketByDate(t *testing.T) {
 						Value:   "2015-12-01T00:00:00Z",
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
-							"salary:avg": 0,
-							"salary:max": 0,
-							"salary:min": 0,
+							"salary:avg": nil,
+							"salary:max": nil,
+							"salary:min": nil,
 						},
 					},
 					"2016-01-01T00:00:00Z": {
@@ -187,9 +187,9 @@ func TestBucketByDate(t *testing.T) {
 						Value:   "2016-02-01T00:00:00Z",
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
-							"salary:avg": 0,
-							"salary:max": 0,
-							"salary:min": 0,
+							"salary:avg": nil,
+							"salary:max": nil,
+							"salary:min": nil,
 						},
 					},
 					"2016-03-01T00:00:00Z": {
@@ -205,9 +205,9 @@ func TestBucketByDate(t *testing.T) {
 						Value:   "2016-04-01T00:00:00Z",
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
-							"salary:avg": 0,
-							"salary:max": 0,
-							"salary:min": 0,
+							"salary:avg": nil,
+							"salary:max": nil,
+							"salary:min": nil,
 						},
 					},
 				},
@@ -219,9 +219,9 @@ func TestBucketByDate(t *testing.T) {
 						Value:   "2015-12-01T00:00:00Z",
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
-							"salary:avg": 0,
-							"salary:max": 0,
-							"salary:min": 0,
+							"salary:avg": nil,
+							"salary:max": nil,
+							"salary:min": nil,
 						},
 					},
 					"2016-01-01T00:00:00Z": {
@@ -237,9 +237,9 @@ func TestBucketByDate(t *testing.T) {
 						Value:   "2016-02-01T00:00:00Z",
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
-							"salary:avg": 0,
-							"salary:max": 0,
-							"salary:min": 0,
+							"salary:avg": nil,
+							"salary:max": nil,
+							"salary:min": nil,
 						},
 					},
 					"2016-03-01T00:00:00Z": {
@@ -255,19 +255,16 @@ func TestBucketByDate(t *testing.T) {
 						Value:   "2016-04-01T00:00:00Z",
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
-							"salary:avg": 0,
-							"salary:max": 0,
-							"salary:min": 0,
+							"salary:avg": nil,
+							"salary:max": nil,
+							"salary:min": nil,
 						},
 					},
 				},
 			},
 		},
 	}
-	rm, _ := json.Marshal(*results)
-	em, _ := json.Marshal(expected)
-	if rm == nil || em == nil {
-		// Expect(rm).To(MatchJSON(em))
-
-	}
+	rm, _ := json.MarshalIndent(*results, "", "  ")
+	em, _ := json.MarshalIndent(expected, "", "  ")
+	Expect(rm).To(MatchJSON(em))
 }

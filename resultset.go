@@ -1,13 +1,13 @@
 package aggro
 
 type Resultset struct {
-	Errors  []error
-	Buckets map[string]*ResultBucket
+	Errors  []error                  `json:"errors"`
+	Buckets map[string]*ResultBucket `json:"buckets"`
 }
 
 type ResultBucket struct {
-	Value      string
-	Metrics    map[string]interface{}
-	Buckets    map[string]*ResultBucket
+	Value      string                   `json:"value"`
+	Metrics    map[string]interface{}   `json:"metrics"`
+	Buckets    map[string]*ResultBucket `json:"buckets"`
 	sourceRows []map[string]Cell
 }

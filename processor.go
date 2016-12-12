@@ -56,6 +56,7 @@ func (p *queryProcessor) aggregate() {
 		Buckets: buckets,
 	}
 }
+
 func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregate *Bucket, results map[string]*ResultBucket) map[string]*ResultBucket {
 	// If there's no aggregate, we're done.
 	if aggregate == nil {
@@ -65,7 +66,7 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 	// Ensure we have the details required to bucket on.
 	if aggregate.Field.Type == "datetime" && aggregate.DatetimeOptions == nil {
 		p.err = errors.New("Bucketing by datetime without DatetimeOptions set")
-		return results
+    return results
 	}
 
 	// Grab the cell that we're aggregating on.
@@ -100,6 +101,7 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 	// Bump depth and recurse to next level, passing in the children as the results.
 	depth++
 	bucket.Buckets = p.recurse(depth, index, row, aggregate.Bucket, bucket.Buckets)
+
 	// Update the current results bucket with the new values, then return.
 	results[value] = bucket
 	return results

@@ -3,7 +3,11 @@ package aggro
 import (
 	"errors"
 	"fmt"
+	"time"
 )
+
+// MetricDelimeter is a string used to separate metric field's from names.
+var MetricDelimeter = ":"
 
 type queryProcessor struct {
 	dataset     *Dataset
@@ -12,6 +16,7 @@ type queryProcessor struct {
 	measurables []*[]Cell
 	err         error
 	results     *Resultset
+	hasDatetime bool
 }
 
 func (p *queryProcessor) Run() (*Resultset, error) {
@@ -44,6 +49,9 @@ func (p *queryProcessor) aggregate() {
 	for i, row := range p.dataset.Rows {
 		buckets = p.recurse(0, i, row, p.query.Bucket, buckets)
 	}
+
+	buckets = p.fillDatetimeGaps(buckets)
+
 	p.results = &Resultset{
 		Buckets: buckets,
 	}
@@ -55,31 +63,40 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 		return results
 	}
 
+	// Ensure we have the details required to bucket on.
+	if aggregate.Field.Type == "datetime" && aggregate.DatetimeOptions == nil {
+		p.err = errors.New("Bucketing by datetime without DatetimeOptions set")
+    return results
+	}
+
 	// Grab the cell that we're aggregating on.
 	cell := row[aggregate.Field.Name]
-
-	// If cell was empty, we can ignore it.
+	
+	// Handle nil cell.
 	if cell == nil {
 		return results
 	}
 
-	// Check we can aggregate this cell.
-	if !cell.IsAggregatable() {
-		p.err = fmt.Errorf("Non aggregatable cell found (`%s`) at depth %d, index %d", aggregate.Field.Name, depth, index)
+	// And grab the underlying aggregatable string value.
+	value := ""
+	switch tCell := cell.(type) {
+	case *StringCell:
+		// String Cell's are easy, it's just the value.
+		value = tCell.value
+	case *DatetimeCell:
+		p.hasDatetime = true
+		// Datetime Cell's are a bit more complicated, and need the period value.
+		value, p.err = tCell.ValueForPeriod(aggregate.DatetimeOptions.Period, aggregate.DatetimeOptions.Location)
+		if p.err != nil {
+			return results
+		}
+	default:
+		p.err = fmt.Errorf("Non aggregatable cell found at depth %d, index %d", depth, index)
 		return results
 	}
 
-	// And grab the underlying aggregatable string value.
-	value := cell.AggregatableCell().Value()
-
-	// Ensure we have a result bucket for this value, making on if we don't.
-	bucket := results[value]
-	if bucket == nil {
-		bucket = &ResultBucket{
-			Value:   value,
-			Buckets: map[string]*ResultBucket{},
-		}
-	}
+	// Ensure we have a result bucket for this value, making one if we don't.
+	bucket := ensureValueBucket(results, value)
 
 	// If there's no next bucket, we're at the deepest point. Add data to measure.
 	if aggregate.Bucket == nil {
@@ -96,39 +113,142 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 	return results
 }
 
+func ensureValueBucket(results map[string]*ResultBucket, value string) *ResultBucket {
+	bucket := results[value]
+	if bucket == nil {
+		bucket = &ResultBucket{
+			Value:   value,
+			Buckets: map[string]*ResultBucket{},
+		}
+	}
+	return bucket
+}
+
+func (p *queryProcessor) fillDatetimeGaps(results map[string]*ResultBucket) map[string]*ResultBucket {
+	if !p.hasDatetime {
+		return results
+	}
+	return p.fillBucketDatetimeGaps(p.query.Bucket, results)
+}
+
+func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[string]*ResultBucket) map[string]*ResultBucket {
+	if bucket == nil || len(results) < 0 {
+		return results
+	}
+	if bucket.Field.Type == "datetime" {
+		// Get the max and min values.
+		var min, max *string
+		// Set the min to the start if there is one.
+		if bucket.DatetimeOptions.Start != nil {
+			var start string
+			start, p.err = datetimeValueForPeriod(
+				bucket.DatetimeOptions.Start,
+				bucket.DatetimeOptions.Period,
+				bucket.DatetimeOptions.Location,
+			)
+			if p.err != nil {
+				return results
+			}
+			min = &start
+		}
+		// Set the max to the end if there is one.
+		if bucket.DatetimeOptions.End != nil {
+			var end string
+			end, p.err = datetimeValueForPeriod(
+				bucket.DatetimeOptions.End,
+				bucket.DatetimeOptions.Period,
+				bucket.DatetimeOptions.Location,
+			)
+			if p.err != nil {
+				return results
+			}
+			max = &end
+		}
+		// Now extend the start and end depending on the values in the results.
+		for key, _ := range results {
+			value := key
+			// Min being nil means max is too. Set them to the first result.
+			if min == nil {
+				min = &value
+				max = &value
+			} else {
+				if *min > value {
+					min = &value
+				}
+				if *max < value {
+					max = &value
+				}
+			}
+		}
+		// No need to do anything if we only have a single bucket length.
+		if *min == *max {
+			return results
+		}
+
+		loopValue := *min
+		var loopDate time.Time
+		loopDate, p.err = time.Parse(time.RFC3339, loopValue)
+		if p.err != nil {
+			return results
+		}
+		// Now loop until we hit the max point, ensuring each period exists.
+		for loopValue <= *max {
+			// Make sure this period exists.
+			results[loopValue] = ensureValueBucket(results, loopValue)
+			if bucket.Bucket == nil {
+				p.tipBuckets[results[loopValue]] = true
+			}
+			// Now bump the date up one period, and loop.
+			date, err := datetimeAddPeriod(&loopDate, bucket.DatetimeOptions.Period)
+			if err != nil {
+				p.err = err
+				return results
+			}
+			loopDate = *date
+			loopValue, p.err = datetimeValueForPeriod(
+				&loopDate,
+				bucket.DatetimeOptions.Period,
+				bucket.DatetimeOptions.Location,
+			)
+			if p.err != nil {
+				return results
+			}
+		}
+	}
+
+	// Now recurse into any children result sets.
+	for _, result := range results {
+		result.Buckets = p.fillBucketDatetimeGaps(bucket.Bucket, result.Buckets)
+	}
+
+	return results
+}
+
 func (p *queryProcessor) measure() {
 	if p.err != nil {
 		return
 	}
 
-	//sourceRows []map[string]Cell
-	for bucket, _ := range p.tipBuckets {
+	// We only add metrics for the tip buckets, i.e. the deepest nesting.
+	for bucket := range p.tipBuckets {
 		// Create measurers for each of the metrics, then feed data into them.
-		measurers := make([]measurer, len(p.query.Metrics))
-		for i, metric := range p.query.Metrics {
-			measurers[i], p.err = metric.measurer()
-			if p.err != nil {
-				return
-			}
-		}
+		bucket.Metrics = map[string]interface{}{}
+		var m measurer
 
 		for i := range p.query.Metrics {
 			metric := &p.query.Metrics[i]
+			// Create a measurer.
+			m, p.err = metric.measurer()
+			if p.err != nil {
+				return
+			}
+			// Now add all of the data to the measurer.
 			for j := range bucket.sourceRows {
 				row := bucket.sourceRows[j]
-				if !row[metric.Field].IsMetricable() {
-					p.err = fmt.Errorf("Non metricable cell found (`%s`)", metric.Field)
-					return
-				}
-				if row[metric.Field].MeasurableCell() != nil {
-					measurers[i].AddDatum(row[metric.Field].MeasurableCell().Value())
-				}
+				m.AddDatum(row[metric.Field].MeasurableCell().Value())
 			}
-		}
-		bucket.Metrics = map[string]interface{}{}
-		for i, _ := range p.query.Metrics {
-			metric := &p.query.Metrics[i]
-			bucket.Metrics[metric.Field+":"+metric.Type] = measurers[i].Result()
+			// And then push the result into the metric resultset.
+			bucket.Metrics[metric.Field+MetricDelimeter+metric.Type] = m.Result()
 		}
 	}
 }

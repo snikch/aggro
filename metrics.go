@@ -1,6 +1,28 @@
 package aggro
 
-import "github.com/shopspring/decimal"
+import (
+	"fmt"
+
+	"github.com/shopspring/decimal"
+)
+
+type Metric struct {
+	Type  string
+	Field string
+}
+
+func (m *Metric) measurer() (measurer, error) {
+	switch m.Type {
+	case "avg":
+		return &averager{}, nil
+	case "min":
+		return &min{}, nil
+	case "max":
+		return &max{}, nil
+	default:
+		return nil, fmt.Errorf("Unknown metric: %s", m.Type)
+	}
+}
 
 type measurer interface {
 	AddDatum(interface{})
@@ -19,6 +41,9 @@ func (a *averager) AddDatum(datum interface{}) {
 }
 
 func (a *averager) Result() interface{} {
+	if a.count == 0 {
+		return nil
+	}
 	result, _ := a.sum.Div(decimal.NewFromFloat(float64(a.count))).Float64()
 	return result
 }
@@ -38,6 +63,9 @@ func (a *min) AddDatum(datum interface{}) {
 }
 
 func (a *min) Result() interface{} {
+	if a.amount == nil {
+		return nil
+	}
 	result, _ := a.amount.Float64()
 	return result
 }
@@ -57,6 +85,9 @@ func (a *max) AddDatum(datum interface{}) {
 }
 
 func (a *max) Result() interface{} {
+	if a.amount == nil {
+		return nil
+	}
 	result, _ := a.amount.Float64()
 	return result
 }

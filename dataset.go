@@ -117,14 +117,8 @@ func newCell(datum interface{}, field *Field) (Cell, error) {
 
 type Cell interface {
 	FieldDefinition() *Field
-	IsAggregatable() bool
 	IsMetricable() bool
-	AggregatableCell() AggregatableCell
 	MeasurableCell() MeasurableCell
-}
-
-type AggregatableCell interface {
-	Value() string
 }
 
 type MeasurableCell interface {
@@ -140,19 +134,12 @@ func (cell *NumberCell) FieldDefinition() *Field {
 	return cell.field
 }
 
-func (cell *NumberCell) IsAggregatable() bool {
-	return false
-}
 func (cell *NumberCell) IsMetricable() bool {
 	return true
 }
 
 func (cell *NumberCell) Value() interface{} { //*decimal.Decimal {
 	return cell.value
-}
-
-func (cell *NumberCell) AggregatableCell() AggregatableCell {
-	return nil
 }
 
 func (cell *NumberCell) MeasurableCell() MeasurableCell {
@@ -168,9 +155,6 @@ func (cell *DatetimeCell) FieldDefinition() *Field {
 	return cell.field
 }
 
-func (cell *DatetimeCell) IsAggregatable() bool {
-	return false
-}
 func (cell *DatetimeCell) IsMetricable() bool {
 	return true
 }
@@ -179,12 +163,13 @@ func (cell *DatetimeCell) Value() interface{} { //*time.Time {
 	return cell.value
 }
 
-func (cell *DatetimeCell) AggregatableCell() AggregatableCell {
-	return nil
-}
-
 func (cell *DatetimeCell) MeasurableCell() MeasurableCell {
 	return cell
+}
+
+// ValueForPeriod returns the start of a given period.
+func (cell *DatetimeCell) ValueForPeriod(period DatetimePeriod, location *time.Location) (string, error) {
+	return datetimeValueForPeriod(cell.value, period, location)
 }
 
 type StringCell struct {
@@ -196,19 +181,12 @@ func (cell *StringCell) FieldDefinition() *Field {
 	return cell.field
 }
 
-func (cell *StringCell) IsAggregatable() bool {
-	return true
-}
 func (cell *StringCell) IsMetricable() bool {
 	return false
 }
 
 func (cell *StringCell) Value() string {
 	return cell.value
-}
-
-func (cell *StringCell) AggregatableCell() AggregatableCell {
-	return cell
 }
 
 func (cell *StringCell) MeasurableCell() MeasurableCell {

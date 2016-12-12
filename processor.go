@@ -79,7 +79,7 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 	case *DatetimeCell:
 		p.hasDatetime = true
 		// Datetime Cell's are a bit more complicated, and need the period value.
-		value, p.err = tCell.ValueForPeriod(aggregate.DatetimeOptions.Period)
+		value, p.err = tCell.ValueForPeriod(aggregate.DatetimeOptions.Period, aggregate.DatetimeOptions.Location)
 		if p.err != nil {
 			return results
 		}
@@ -133,7 +133,11 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 		// Set the min to the start if there is one.
 		if bucket.DatetimeOptions.Start != nil {
 			var start string
-			start, p.err = datetimeValueForPeriod(bucket.DatetimeOptions.Start, bucket.DatetimeOptions.Period)
+			start, p.err = datetimeValueForPeriod(
+				bucket.DatetimeOptions.Start,
+				bucket.DatetimeOptions.Period,
+				bucket.DatetimeOptions.Location,
+			)
 			if p.err != nil {
 				return results
 			}
@@ -142,7 +146,11 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 		// Set the max to the end if there is one.
 		if bucket.DatetimeOptions.End != nil {
 			var end string
-			end, p.err = datetimeValueForPeriod(bucket.DatetimeOptions.End, bucket.DatetimeOptions.Period)
+			end, p.err = datetimeValueForPeriod(
+				bucket.DatetimeOptions.End,
+				bucket.DatetimeOptions.Period,
+				bucket.DatetimeOptions.Location,
+			)
 			if p.err != nil {
 				return results
 			}
@@ -189,7 +197,11 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 				return results
 			}
 			loopDate = *date
-			loopValue, p.err = datetimeValueForPeriod(&loopDate, bucket.DatetimeOptions.Period)
+			loopValue, p.err = datetimeValueForPeriod(
+				&loopDate,
+				bucket.DatetimeOptions.Period,
+				bucket.DatetimeOptions.Location,
+			)
 			if p.err != nil {
 				return results
 			}

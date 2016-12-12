@@ -23,7 +23,7 @@ func TestDatetimePeriodQuarter(t *testing.T) {
 		{time.Date(2016, 11, 22, 12, 12, 20, 0, time.UTC), "2016-10-01T00:00:00Z"},
 		{time.Date(2016, 12, 22, 12, 12, 20, 0, time.UTC), "2016-10-01T00:00:00Z"},
 	} {
-		result, err := (&DatetimeCell{value: &example.t}).ValueForPeriod(Quarter)
+		result, err := (&DatetimeCell{value: &example.t}).ValueForPeriod(Quarter, time.UTC)
 		if err != nil {
 			t.Fatalf("Unexpected error: %s", err)
 		}
@@ -49,7 +49,7 @@ func TestDatetimePeriodWeek(t *testing.T) {
 		{time.Date(2016, 1, 9, 12, 12, 20, 0, time.UTC), "2016-01-03T00:00:00Z"},
 		{time.Date(2016, 1, 10, 12, 12, 20, 0, time.UTC), "2016-01-10T00:00:00Z"},
 	} {
-		result, err := (&DatetimeCell{value: &example.t}).ValueForPeriod(Week)
+		result, err := (&DatetimeCell{value: &example.t}).ValueForPeriod(Week, time.UTC)
 		if err != nil {
 			t.Fatalf("Unexpected error: %s", err)
 		}

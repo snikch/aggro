@@ -18,6 +18,9 @@ type DatetimeBucketOptions struct {
 	// Start will, if provided, ensure buckets start at this date.
 	Start *time.Time
 	// End will, if provided, ensure buckets continue to this date.
-	End    *time.Time
+	End *time.Time
+	// What interval period are the results to be bucketed at.
 	Period DatetimePeriod
+	// Datetimes should be bucketed based on the date in this location.
+	Location *time.Location
 }

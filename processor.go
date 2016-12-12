@@ -71,6 +71,12 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 
 	// Grab the cell that we're aggregating on.
 	cell := row[aggregate.Field.Name]
+	
+	// Handle nil cell.
+	if cell == nil {
+		return results
+	}
+
 	// And grab the underlying aggregatable string value.
 	value := ""
 	switch tCell := cell.(type) {

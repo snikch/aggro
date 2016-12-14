@@ -50,6 +50,7 @@ func TestBucketByString(t *testing.T) {
 			{Type: "mode", Field: "salary"},
 			{Type: "stdev", Field: "salary"},
 			{Type: "cardinality", Field: "salary"},
+			{Type: "count", Field: "salary"},
 			{Type: "sum", Field: "salary"},
 		},
 		Bucket: &Bucket{
@@ -84,6 +85,7 @@ func TestBucketByString(t *testing.T) {
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:cardinality": 2,
+							"salary:count":       2,
 							"salary:max":         120000,
 							"salary:mean":        100000,
 							"salary:median":      100000,
@@ -98,6 +100,7 @@ func TestBucketByString(t *testing.T) {
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:cardinality": 2,
+							"salary:count":       2,
 							"salary:max":         150000,
 							"salary:mean":        120000,
 							"salary:median":      120000,
@@ -116,7 +119,8 @@ func TestBucketByString(t *testing.T) {
 						Value:   "Engineering",
 						Buckets: map[string]*ResultBucket{},
 						Metrics: map[string]interface{}{
-							"salary:cardinality": 3,
+							"salary:cardinality": 2,
+							"salary:count":       3,
 							"salary:max":         160000,
 							"salary:mean":        133333.33333333334,
 							"salary:median":      120000,

@@ -244,7 +244,7 @@ func (a *cardinality) AddDatum(datum interface{}) {
 		a.values = map[interface{}]int{}
 	}
 
-	// Track frequency of our values within the dataset. Handle
+	// Track frequency of our values within the dataset. 
 	switch t := datum.(type) {
 	case *decimal.Decimal:
 		floatVal, _ := t.Float64()
@@ -296,9 +296,9 @@ func (a *sum) Result() interface{} {
 // squared differences from the mean.
 //
 // 1) Determine mean.
-// 2) Then for value in the dataset, subtract the mean and square the result.
+// 2) Then for each value in the dataset, subtract the mean and square the result.
 // 3) Calculate the mean of those squared differences (variance).
-// 4) Square root the result.
+// 4) Return square root of variance.
 type stdev struct {
 	count int
 	sum   decimal.Decimal
@@ -328,7 +328,7 @@ func (a *stdev) Result() interface{} {
 	// 1) Determine the mean (avg).
 	mean, _ := a.sum.Div(decimal.NewFromFloat(float64(a.count))).Float64()
 
-	// 2) Ranging our dataset, subtract mean and square the result from each value.
+	// 2) Ranging our dataset, subtract mean from value and square the result.
 	total := 0.0
 	for _, number := range a.list {
 		val, _ := number.Float64()

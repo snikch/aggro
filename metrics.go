@@ -123,8 +123,6 @@ func (a *median) Result() interface{} {
 // Mode
 // Mode is the value(s) that occur most often within the dataset. If no values
 // are repeated (or all values are repeated), then the dataset has no mode.
-//
-// 1) Range each value in our dataset.
 type mode struct {
 	count int
 	list  []decimal.Decimal

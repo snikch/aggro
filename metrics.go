@@ -92,21 +92,31 @@ func (a *median) Result() interface{} {
 		return nil
 	}
 
+	// Our result.
+	var median float64
+
 	// Sort our list in numerical order.
 	sort.Sort(decimalSortNumerical(a.list))
 
+	// Decimal size of our dataset.
+	size := decimal.NewFromFloat(float64(len(a.list)))
+
 	// Find the middle of our dataset.
-	middle := len(a.list) / 2
-	median, _ := a.list[middle].Float64()
+	middle := size.Div(decimal.New(2, 0))
 
 	// Is our dataset length even? If so, we don't have a correct middle value.
 	// In this case, take the middle two values of our dataset and determine the
 	// mean of them.
-	if len(a.list)%2 == 0 {
-		prev, _ := a.list[middle-1].Float64()
-		median = (median + prev) / 2
-	}
+	if size.Mod(decimal.New(2, 0)).Equals(decimal.New(0, 1)) {
+		// Find value: middle - 1.
+		prev := a.list[middle.Sub(decimal.New(1, 0)).IntPart()]
 
+		// Add two middle values and divide by 2.
+		median, _ = a.list[middle.IntPart()].Add(prev).Div(decimal.New(2, 0)).Float64()
+	} else {
+		// Simply return middle value.
+		median, _ = a.list[middle.IntPart()].Float64()
+	}
 	return median
 }
 

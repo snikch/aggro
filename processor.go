@@ -3,7 +3,6 @@ package aggro
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"time"
 )
 
@@ -247,14 +246,8 @@ func (p *queryProcessor) measure() {
 			for j := range bucket.sourceRows {
 				row := bucket.sourceRows[j]
 
-				// If measurer is cardinality, we can +1 not worrying about field value.
-				if (reflect.TypeOf(m) == reflect.TypeOf(&cardinality{})) {
-					m.AddDatum(1)
-					continue
-				}
-
 				// Check the field is of a metricable type.
-				if !row[metric.Field].IsMetricable() {
+				if !row[metric.Field].IsMetricable(m) {
 					p.err = fmt.Errorf("Non metricable cell found (`%s:%s`)", metric.Field, metric.Type)
 					return
 				}

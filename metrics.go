@@ -31,6 +31,8 @@ func (m *Metric) measurer() (measurer, error) {
 		return &sum{}, nil
 	case "stdev":
 		return &stdev{}, nil
+	case "count":
+		return &valueCount{}, nil
 	default:
 		return nil, fmt.Errorf("Unknown metric: %s", m.Type)
 	}
@@ -42,14 +44,20 @@ type measurer interface {
 }
 
 // Mean
+// Your standard average. Sum all values and divide by the number of values.
 type mean struct {
 	count int
 	sum   decimal.Decimal
 }
 
 func (a *mean) AddDatum(datum interface{}) {
+	// Cast to *decimal.Decimal.
 	amount := datum.(*decimal.Decimal)
+
+	// Increase our count.
 	a.count++
+
+	// Add our value to our existing sum.
 	a.sum = a.sum.Add(*amount)
 }
 
@@ -57,17 +65,25 @@ func (a *mean) Result() interface{} {
 	if a.count == 0 {
 		return nil
 	}
+
+	// Divide our sum by the count.
 	result, _ := a.sum.Div(decimal.NewFromFloat(float64(a.count))).Float64()
 	return result
 }
 
 // Median
+// Dataset should be in numerical order. Median is the middle value of our dataset.
+// If there is no middle value (due to dataset having even number of values) then
+// the median is the mean (average) of the middle two values.
 type median struct {
 	list []decimal.Decimal
 }
 
 func (a *median) AddDatum(datum interface{}) {
+	// Cast to *decimal.Decimal.
 	amount := datum.(*decimal.Decimal)
+
+	// Append value to median slice.
 	a.list = append(a.list, *amount)
 }
 
@@ -79,11 +95,13 @@ func (a *median) Result() interface{} {
 	// Sort our list in numerical order.
 	sort.Sort(decimalSortNumerical(a.list))
 
-	// Determine median value.
+	// Find the middle of our dataset.
 	middle := len(a.list) / 2
 	median, _ := a.list[middle].Float64()
 
-	// Even slice? Get the mean of the middle values.
+	// Is our dataset length even? If so, we don't have a correct middle value.
+	// In this case, take the middle two values of our dataset and determine the
+	// mean of them.
 	if len(a.list)%2 == 0 {
 		prev, _ := a.list[middle-1].Float64()
 		median = (median + prev) / 2
@@ -93,6 +111,10 @@ func (a *median) Result() interface{} {
 }
 
 // Mode
+// Mode is the value(s) that occur most often within the dataset. If no values
+// are repeated (or all values are repeated), then the dataset has no mode.
+//
+// 1) Range each value in our dataset.
 type mode struct {
 	count int
 	list  []decimal.Decimal
@@ -100,8 +122,13 @@ type mode struct {
 }
 
 func (a *mode) AddDatum(datum interface{}) {
+	// Cast to *decimal.Decimal.
 	amount := datum.(*decimal.Decimal)
+
+	// Append value to mode slice.
 	a.list = append(a.list, *amount)
+
+	// Increase our count.
 	a.count++
 }
 
@@ -110,44 +137,54 @@ func (a *mode) Result() interface{} {
 		return nil
 	}
 
-	numbers := []float64{}
-	for _, number := range a.list {
-		value, _ := number.Float64()
-		numbers = append(numbers, value)
-	}
-
+	// Results slice.
 	modes := []float64{}
-	freq := make(map[float64]int, len(numbers))
+
+	// 'tip' represents our highest frequency count across our entire dataset. A
+	// dataset with a tip of '1' means no repeated values were found.
 	tip := 0
 
-	// Range our values determining the highest frequency (tip).
-	for _, x := range numbers {
-		freq[x]++
-		if freq[x] > tip {
-			tip = freq[x]
+	// Range our values building a frequency map. This represents each value and
+	// the number of times it appears in our dataset.
+	freq := make(map[float64]int, len(a.list))
+	for _, val := range a.list {
+		value, _ := val.Float64()
+		freq[value]++
+		if freq[value] > tip {
+			tip = freq[value]
 		}
 	}
-	for x, f := range freq {
-		if f == tip {
-			modes = append(modes, x)
+
+	// Range our frequency map, checking if our values count matches our tip. If so
+	// we have a mode!
+	for val, c := range freq {
+		if c == tip {
+			modes = append(modes, val)
 		}
 	}
-	if tip == 1 || len(modes) == len(numbers) {
+
+	// If tip is 1 (no repeating values found), or length of resulting modes slice
+	// matches our dataset, then return no mode (empty).
+	if tip == 1 || len(modes) == len(a.list) {
 		modes = []float64{}
 	}
 	return modes
 }
 
 // Min
+// Min is the smallest value within the dataset.
 type min struct {
 	amount *decimal.Decimal
 }
 
 func (a *min) AddDatum(datum interface{}) {
+	// Cast to *decimal.Decimal.
 	amount := datum.(*decimal.Decimal)
 	if a.amount == nil {
 		a.amount = amount
 	}
+
+	// If value is < existing min.amount, assign as min.amount.
 	if (a.amount).Cmp(*amount) > -1 {
 		a.amount = amount
 	}
@@ -162,15 +199,19 @@ func (a *min) Result() interface{} {
 }
 
 // Max
+// Max is the largest value within the dataset.
 type max struct {
 	amount *decimal.Decimal
 }
 
 func (a *max) AddDatum(datum interface{}) {
+	// Cast to *decimal.Decimal.
 	amount := datum.(*decimal.Decimal)
 	if a.amount == nil {
 		a.amount = amount
 	}
+
+	// If value is > existing max.amount, assign as max.amount.
 	if (a.amount).Cmp(*amount) < 0 {
 		a.amount = amount
 	}
@@ -184,26 +225,55 @@ func (a *max) Result() interface{} {
 	return result
 }
 
-// Cadinality
+// Cardinality
+// Cardinality is a count of unique values in our dataset.
 type cardinality struct {
-	size int
+	values map[interface{}]int
 }
 
 func (a *cardinality) AddDatum(datum interface{}) {
-	a.size++
+	if a.values == nil {
+		a.values = map[interface{}]int{}
+	}
+
+	// Track frequency of our values within the dataset. Handle
+	switch t := datum.(type) {
+	case *decimal.Decimal:
+		floatVal, _ := t.Float64()
+		a.values[floatVal]++
+	case string:
+		a.values[t]++
+	}
 }
 
 func (a *cardinality) Result() interface{} {
+	return len(a.values)
+}
+
+// Value Count
+// valueCount is the total number of values in the dataset.
+type valueCount struct {
+	size int
+}
+
+func (a *valueCount) AddDatum(datum interface{}) {
+	a.size++
+}
+
+func (a *valueCount) Result() interface{} {
 	return a.size
 }
 
 // Sum
+// Sum is all dataset values added together.
 type sum struct {
 	sum decimal.Decimal
 }
 
 func (a *sum) AddDatum(datum interface{}) {
 	amount := datum.(*decimal.Decimal)
+
+	// Add our value to existing sum.
 	a.sum = a.sum.Add(*amount)
 }
 
@@ -213,6 +283,14 @@ func (a *sum) Result() interface{} {
 }
 
 // Standard deviation
+// Standard deviation is a representation of how spread out values in the dataset are.
+// It's calculated as square root of 'variance'. Variance is the average of the
+// squared differences from the mean.
+//
+// 1) Determine mean.
+// 2) Then for value in the dataset, subtract the mean and square the result.
+// 3) Calculate the mean of those squared differences (variance).
+// 4) Square root the result.
 type stdev struct {
 	count int
 	sum   decimal.Decimal
@@ -220,29 +298,39 @@ type stdev struct {
 }
 
 func (a *stdev) AddDatum(datum interface{}) {
+	// Cast to *decimal.Decimal.
 	amount := datum.(*decimal.Decimal)
+
+	// Increase our count.
 	a.count++
+
+	// Add our value to existing sum.
 	a.sum = a.sum.Add(*amount)
+
+	// Append value to stdev slice.
 	a.list = append(a.list, *amount)
 }
 
 func (a *stdev) Result() interface{} {
-	if a.count == 0 {
+	// stdev requires two or more rows to work with.
+	if a.count < 2 {
 		return nil
 	}
 
-	// Find the mean.
+	// 1) Determine the mean (avg).
 	mean, _ := a.sum.Div(decimal.NewFromFloat(float64(a.count))).Float64()
 
-	// Find and add each values distance to the mean.
+	// 2) Ranging our dataset, subtract mean and square the result from each value.
 	total := 0.0
 	for _, number := range a.list {
 		val, _ := number.Float64()
 		total += math.Pow(val-mean, 2)
 	}
 
-	// Divide by result set length.
+	// 3) Calculate the variance (mean of our squared results).
 	variance := total / float64(len(a.list)-1)
+
+	// 4) Square the result.
 	return math.Sqrt(variance)
 }
 

@@ -117,7 +117,7 @@ func newCell(datum interface{}, field *Field) (Cell, error) {
 
 type Cell interface {
 	FieldDefinition() *Field
-	IsMetricable() bool
+	IsMetricable(m measurer) bool
 	MeasurableCell() MeasurableCell
 }
 
@@ -134,7 +134,7 @@ func (cell *NumberCell) FieldDefinition() *Field {
 	return cell.field
 }
 
-func (cell *NumberCell) IsMetricable() bool {
+func (cell *NumberCell) IsMetricable(m measurer) bool {
 	return true
 }
 
@@ -155,8 +155,8 @@ func (cell *DatetimeCell) FieldDefinition() *Field {
 	return cell.field
 }
 
-func (cell *DatetimeCell) IsMetricable() bool {
-	return true
+func (cell *DatetimeCell) IsMetricable(m measurer) bool {
+	return false
 }
 
 func (cell *DatetimeCell) Value() interface{} { //*time.Time {
@@ -164,7 +164,7 @@ func (cell *DatetimeCell) Value() interface{} { //*time.Time {
 }
 
 func (cell *DatetimeCell) MeasurableCell() MeasurableCell {
-	return cell
+	return nil
 }
 
 // ValueForPeriod returns the start of a given period.
@@ -181,14 +181,20 @@ func (cell *StringCell) FieldDefinition() *Field {
 	return cell.field
 }
 
-func (cell *StringCell) IsMetricable() bool {
-	return false
+func (cell *StringCell) IsMetricable(m measurer) bool {
+	// We allow certain metrics to run on StringCells.
+	switch m.(type) {
+	case *cardinality, *valueCount:
+		return true
+	default:
+		return false
+	}
 }
 
-func (cell *StringCell) Value() string {
+func (cell *StringCell) Value() interface{} {
 	return cell.value
 }
 
 func (cell *StringCell) MeasurableCell() MeasurableCell {
-	return nil
+	return cell
 }

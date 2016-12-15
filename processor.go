@@ -64,14 +64,14 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 	}
 
 	// Ensure we have the details required to bucket on.
-	if aggregate.Field.Type == "datetime" && aggregate.DatetimeOptions == nil {
+	if aggregate.Field.Type == fieldTypeDatetime && aggregate.DatetimeOptions == nil {
 		p.err = errors.New("Bucketing by datetime without DatetimeOptions set")
-    return results
+		return results
 	}
 
 	// Grab the cell that we're aggregating on.
 	cell := row[aggregate.Field.Name]
-	
+
 	// Handle nil cell.
 	if cell == nil {
 		return results
@@ -135,7 +135,7 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 	if bucket == nil || len(results) < 0 {
 		return results
 	}
-	if bucket.Field.Type == "datetime" {
+	if bucket.Field.Type == fieldTypeDatetime {
 		// Get the max and min values.
 		var min, max *string
 		// Set the min to the start if there is one.
@@ -245,8 +245,16 @@ func (p *queryProcessor) measure() {
 			// Now add all of the data to the measurer.
 			for j := range bucket.sourceRows {
 				row := bucket.sourceRows[j]
+
+				// Check the field is of a metricable type.
+				if !row[metric.Field].IsMetricable(m) {
+					p.err = fmt.Errorf("Non metricable cell found (`%s:%s`)", metric.Field, metric.Type)
+					return
+				}
+
 				m.AddDatum(row[metric.Field].MeasurableCell().Value())
 			}
+
 			// And then push the result into the metric resultset.
 			bucket.Metrics[metric.Field+MetricDelimeter+metric.Type] = m.Result()
 		}

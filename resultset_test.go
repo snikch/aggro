@@ -329,3 +329,40 @@ func TestFlattenResultDeep(t *testing.T) {
 	em, _ := json.MarshalIndent(expected, "", "  ")
 	Expect(rm).To(MatchJSON(em))
 }
+
+func TestTabulateDepthTooHigh(t *testing.T) {
+	input := &Resultset{
+		Buckets: map[string]*ResultBucket{
+			"A1": {
+				Value: "A1",
+				Buckets: map[string]*ResultBucket{
+					"B1": {
+						Value: "B1",
+						Buckets: map[string]*ResultBucket{
+							"C1": {
+								Value: "C1",
+								Buckets: map[string]*ResultBucket{
+									"D1": {
+										Value:   "D1",
+										Buckets: map[string]*ResultBucket{},
+										Metrics: map[string]interface{}{
+											"salary:max": 1111,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	_, err := Tabulate(input, 0)
+	if err != ErrTargetDepthTooLow {
+		t.Fatalf("Expected error converting results, got none")
+	}
+	_, err = Tabulate(input, 4)
+	if err != ErrTargetDepthNotReached {
+		t.Fatalf("Expected error converting results, got none")
+	}
+}

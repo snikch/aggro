@@ -1,6 +1,9 @@
 package aggro
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type Resultset struct {
 	Errors  []error                  `json:"errors"`
@@ -21,8 +24,16 @@ type ResultTable struct {
 	ColumnTitles [][]string                 `json:"column_titles"`
 }
 
+var (
+	ErrTargetDepthTooLow     = fmt.Errorf("Tabulate: target depth should be 1 or above.")
+	ErrTargetDepthNotReached = fmt.Errorf("Tabulate: reached deepest bucket before hitting target depth.")
+)
+
 // Tabulate takes a Resultset and converts it to tabular data.
 func Tabulate(results *Resultset, depth int) (*ResultTable, error) {
+	if depth < 1 {
+		return nil, ErrTargetDepthTooLow
+	}
 	// Create our table.
 	table := &ResultTable{
 		Rows:         [][]map[string]interface{}{},
@@ -39,7 +50,10 @@ func Tabulate(results *Resultset, depth int) (*ResultTable, error) {
 
 	// Recursively build the lookup for each of the root result buckets.
 	for _, bucket := range results.Buckets {
-		buildLookup([]string{}, 1, depth, table, lookup, bucket)
+		err := buildLookup([]string{}, 1, depth, table, lookup, bucket)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Now build up the cells for each of the row / column tuples.
@@ -66,12 +80,15 @@ const lookupKeyDelimiter = "🔑🗝😡🗝🔑"
 
 // buildLookup is a recursive function that breaks data into rows and columns
 // at a specific depth.
-func buildLookup(key []string, depth, targetDepth int, table *ResultTable, lookup *resultLookup, bucket *ResultBucket) {
+func buildLookup(key []string, depth, targetDepth int, table *ResultTable, lookup *resultLookup, bucket *ResultBucket) error {
 	// Add the new bucket value to the lookup key.
 	key = append(key, bucket.Value)
 
 	// If we have no buckets, we're at a metric point.
 	if len(bucket.Buckets) == 0 {
+		if depth <= targetDepth {
+			return ErrTargetDepthNotReached
+		}
 		// The column key is made up of just the key parts from the target depth.
 		columnKey := strings.Join(key[targetDepth:], lookupKeyDelimiter)
 		// If we haven't seen this column tuple before, add it to the lookup.
@@ -80,7 +97,7 @@ func buildLookup(key []string, depth, targetDepth int, table *ResultTable, looku
 			lookup.columnLookup[columnKey] = true
 		}
 		lookup.cells[strings.Join(key, lookupKeyDelimiter)] = bucket.Metrics
-		return
+		return nil
 	}
 
 	// If we've reached target depth, add this key to the rows if it's not there.
@@ -96,6 +113,10 @@ func buildLookup(key []string, depth, targetDepth int, table *ResultTable, looku
 	for _, bucket := range bucket.Buckets {
 		newKey := make([]string, len(key))
 		copy(newKey, key)
-		buildLookup(newKey, depth+1, targetDepth, table, lookup, bucket)
+		err := buildLookup(newKey, depth+1, targetDepth, table, lookup, bucket)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }

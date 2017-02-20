@@ -3,7 +3,6 @@ package aggro
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"time"
 )
 
@@ -56,49 +55,6 @@ func (p *queryProcessor) aggregate() {
 	p.results = &Resultset{
 		Buckets: p.sort(buckets),
 	}
-}
-
-type bucketSorter struct {
-	results  []*ResultBucket
-	sortable Sortable
-}
-
-func (sorter *bucketSorter) Len() int {
-	return len(sorter.results)
-}
-func (sorter *bucketSorter) Swap(i, j int) {
-	sorter.results[i], sorter.results[j] = sorter.results[j], sorter.results[i]
-}
-func (sorter *bucketSorter) Less(i, j int) bool {
-	return sorter.sortable.Less(sorter.results[i], sorter.results[j])
-}
-
-func (p *queryProcessor) sort(results map[string]*ResultBucket) []*ResultBucket {
-	return p.sortMap(p.query.Bucket, results)
-}
-func (p *queryProcessor) sortMap(bucket *Bucket, results map[string]*ResultBucket) []*ResultBucket {
-	resultSlice := []*ResultBucket{}
-	for _, result := range results {
-		resultSlice = append(resultSlice, result)
-	}
-	return p.sortSlice(bucket, resultSlice)
-}
-
-func (p *queryProcessor) sortSlice(bucket *Bucket, results []*ResultBucket) []*ResultBucket {
-	sorter := &bucketSorter{
-		results:  results,
-		sortable: sortableForOptions(bucket.Sort),
-	}
-	if sorter.sortable != nil {
-		sort.Sort(sorter)
-	}
-	for _, result := range sorter.results {
-		// Only if another depth exists, do we go deeper.
-		if bucket.Bucket != nil {
-			result.Buckets = p.sortMap(bucket.Bucket, result.bucketLookup)
-		}
-	}
-	return sorter.results
 }
 
 func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregate *Bucket, results map[string]*ResultBucket) map[string]*ResultBucket {
@@ -266,6 +222,10 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 	}
 
 	return results
+}
+
+func (p *queryProcessor) sort(results map[string]*ResultBucket) []*ResultBucket {
+	return sortMap(p.query.Bucket, results)
 }
 
 func (p *queryProcessor) measure() {

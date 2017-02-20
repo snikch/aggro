@@ -78,7 +78,7 @@ type resultLookup struct {
 }
 
 // lookupKeyDelimiter is used to flatten a string array to a single key.
-const lookupKeyDelimiter = "🔑🗝😡🗝🔑"
+const lookupKeyDelimiter = "😡"
 
 // buildLookup is a recursive function that breaks data into rows and columns
 // at a specific depth.

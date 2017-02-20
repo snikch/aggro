@@ -2,11 +2,13 @@ package aggro
 
 import "time"
 
+// Query represents the bucketing and aggregate metrics that should be run.
 type Query struct {
 	Bucket  *Bucket
 	Metrics []Metric
 }
 
+// Bucket defines how to compare and group data which is then aggregated on.
 type Bucket struct {
 	Bucket          *Bucket
 	Field           *Field
@@ -14,6 +16,7 @@ type Bucket struct {
 	Sort            *SortOptions
 }
 
+// SortOptions represent how this Bucket should be sorted.
 type SortOptions struct {
 	Type   string
 	Metric string

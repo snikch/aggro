@@ -58,10 +58,16 @@ func TestBucketByString(t *testing.T) {
 				Name: "location",
 				Type: "string",
 			},
+			Sort: &SortOptions{
+				Type: "alphabetical",
+			},
 			Bucket: &Bucket{
 				Field: &Field{
 					Name: "department",
 					Type: "string",
+				},
+				Sort: &SortOptions{
+					Type: "alphabetical",
 				},
 			},
 		},
@@ -76,13 +82,12 @@ func TestBucketByString(t *testing.T) {
 	}
 
 	expected := Resultset{
-		Buckets: map[string]*ResultBucket{
-			"Auckland": {
+		Buckets: []*ResultBucket{
+			{
 				Value: "Auckland",
-				Buckets: map[string]*ResultBucket{
-					"Engineering": {
-						Value:   "Engineering",
-						Buckets: map[string]*ResultBucket{},
+				Buckets: []*ResultBucket{
+					{
+						Value: "Engineering",
 						Metrics: map[string]interface{}{
 							"salary:cardinality": 2,
 							"salary:count":       2,
@@ -95,9 +100,8 @@ func TestBucketByString(t *testing.T) {
 							"salary:sum":         200000,
 						},
 					},
-					"Marketing": {
-						Value:   "Marketing",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "Marketing",
 						Metrics: map[string]interface{}{
 							"salary:cardinality": 2,
 							"salary:count":       2,
@@ -112,12 +116,11 @@ func TestBucketByString(t *testing.T) {
 					},
 				},
 			},
-			"Wellington": {
+			{
 				Value: "Wellington",
-				Buckets: map[string]*ResultBucket{
-					"Engineering": {
-						Value:   "Engineering",
-						Buckets: map[string]*ResultBucket{},
+				Buckets: []*ResultBucket{
+					{
+						Value: "Engineering",
 						Metrics: map[string]interface{}{
 							"salary:cardinality": 2,
 							"salary:count":       3,
@@ -130,6 +133,122 @@ func TestBucketByString(t *testing.T) {
 							},
 							"salary:stdev": 23094.01076758503,
 							"salary:sum":   400000,
+						},
+					},
+				},
+			},
+		},
+	}
+	rm, _ := json.Marshal(*results)
+	em, _ := json.Marshal(expected)
+	Expect(rm).To(MatchJSON(em))
+}
+
+func TestBucketByStringDesc(t *testing.T) {
+	RegisterTestingT(t)
+	dataset := &Dataset{
+		Table: table,
+	}
+
+	err := dataset.AddRows(rows...)
+	if err != nil {
+		t.Fatalf("Unexpected error creating dataset: %s", err.Error())
+	}
+
+	query := &Query{
+		Metrics: []Metric{
+			{Type: "max", Field: "salary"},
+			{Type: "min", Field: "salary"},
+			{Type: "mean", Field: "salary"},
+			{Type: "median", Field: "salary"},
+			{Type: "mode", Field: "salary"},
+			{Type: "stdev", Field: "salary"},
+			{Type: "cardinality", Field: "salary"},
+			{Type: "count", Field: "salary"},
+			{Type: "sum", Field: "salary"},
+		},
+		Bucket: &Bucket{
+			Field: &Field{
+				Name: "location",
+				Type: "string",
+			},
+			Sort: &SortOptions{
+				Type: "alphabetical",
+				Desc: true,
+			},
+			Bucket: &Bucket{
+				Field: &Field{
+					Name: "department",
+					Type: "string",
+				},
+				Sort: &SortOptions{
+					Type: "alphabetical",
+					Desc: true,
+				},
+			},
+		},
+	}
+
+	results, err := dataset.Run(query)
+	if err != nil {
+		t.Fatalf("Unexpected error running query: %s", err.Error())
+	}
+	if results == nil {
+		t.Fatalf("Unexpectedly got an empty resultset running query")
+	}
+
+	expected := Resultset{
+		Buckets: []*ResultBucket{
+			{
+				Value: "Wellington",
+				Buckets: []*ResultBucket{
+					{
+						Value: "Engineering",
+						Metrics: map[string]interface{}{
+							"salary:cardinality": 2,
+							"salary:count":       3,
+							"salary:max":         160000,
+							"salary:mean":        133333.33333333334,
+							"salary:median":      120000,
+							"salary:min":         120000,
+							"salary:mode": []float64{
+								120000,
+							},
+							"salary:stdev": 23094.01076758503,
+							"salary:sum":   400000,
+						},
+					},
+				},
+			},
+			{
+				Value: "Auckland",
+				Buckets: []*ResultBucket{
+					{
+						Value: "Marketing",
+						Metrics: map[string]interface{}{
+							"salary:cardinality": 2,
+							"salary:count":       2,
+							"salary:max":         150000,
+							"salary:mean":        120000,
+							"salary:median":      120000,
+							"salary:min":         90000,
+							"salary:mode":        []float64{},
+							"salary:stdev":       42426.40687119285,
+							"salary:sum":         240000,
+						},
+					},
+					{
+						Value: "Engineering",
+						Metrics: map[string]interface{}{
+							"salary:cardinality": 2,
+							"salary:count":       2,
+							"salary:max":         120000,
+							"salary:mean":        100000,
+							"salary:median":      100000,
+							"salary:min":         80000,
+							"salary:mode":        []float64{},
+							"salary:stdev":       28284.2712474619,
+							"salary:sum":         200000,
 						},
 					},
 				},
@@ -165,6 +284,9 @@ func TestBucketByDate(t *testing.T) {
 				Name: "location",
 				Type: "string",
 			},
+			Sort: &SortOptions{
+				Type: "alphabetical",
+			},
 			Bucket: &Bucket{
 				Field: &Field{
 					Name: "start_date",
@@ -175,6 +297,9 @@ func TestBucketByDate(t *testing.T) {
 					Start:    &start,
 					End:      &end,
 					Location: time.UTC,
+				},
+				Sort: &SortOptions{
+					Type: "alphabetical",
 				},
 			},
 		},
@@ -189,49 +314,44 @@ func TestBucketByDate(t *testing.T) {
 	}
 
 	expected := Resultset{
-		Buckets: map[string]*ResultBucket{
-			"Auckland": {
+		Buckets: []*ResultBucket{
+			{
 				Value: "Auckland",
-				Buckets: map[string]*ResultBucket{
-					"2015-12-01T00:00:00Z": {
-						Value:   "2015-12-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+				Buckets: []*ResultBucket{
+					{
+						Value: "2015-12-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:mean": nil,
 							"salary:max":  nil,
 							"salary:min":  nil,
 						},
 					},
-					"2016-01-01T00:00:00Z": {
-						Value:   "2016-01-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-01-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  150000,
 							"salary:mean": 120000,
 							"salary:min":  90000,
 						},
 					},
-					"2016-02-01T00:00:00Z": {
-						Value:   "2016-02-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-02-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  nil,
 							"salary:mean": nil,
 							"salary:min":  nil,
 						},
 					},
-					"2016-03-01T00:00:00Z": {
-						Value:   "2016-03-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-03-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  80000,
 							"salary:mean": 80000,
 							"salary:min":  80000,
 						},
 					},
-					"2016-04-01T00:00:00Z": {
-						Value:   "2016-04-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-04-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  nil,
 							"salary:mean": nil,
@@ -240,48 +360,43 @@ func TestBucketByDate(t *testing.T) {
 					},
 				},
 			},
-			"Wellington": {
+			{
 				Value: "Wellington",
-				Buckets: map[string]*ResultBucket{
-					"2015-12-01T00:00:00Z": {
-						Value:   "2015-12-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+				Buckets: []*ResultBucket{
+					{
+						Value: "2015-12-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  nil,
 							"salary:mean": nil,
 							"salary:min":  nil,
 						},
 					},
-					"2016-01-01T00:00:00Z": {
-						Value:   "2016-01-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-01-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  120000,
 							"salary:mean": 120000,
 							"salary:min":  120000,
 						},
 					},
-					"2016-02-01T00:00:00Z": {
-						Value:   "2016-02-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-02-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  120000,
 							"salary:mean": 120000,
 							"salary:min":  120000,
 						},
 					},
-					"2016-03-01T00:00:00Z": {
-						Value:   "2016-03-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-03-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  160000,
 							"salary:mean": 160000,
 							"salary:min":  160000,
 						},
 					},
-					"2016-04-01T00:00:00Z": {
-						Value:   "2016-04-01T00:00:00Z",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-04-01T00:00:00Z",
 						Metrics: map[string]interface{}{
 							"salary:max":  nil,
 							"salary:mean": nil,
@@ -322,6 +437,9 @@ func TestBucketByDateTZ(t *testing.T) {
 				Name: "location",
 				Type: "string",
 			},
+			Sort: &SortOptions{
+				Type: "alphabetical",
+			},
 			Bucket: &Bucket{
 				Field: &Field{
 					Name: "start_date",
@@ -332,6 +450,9 @@ func TestBucketByDateTZ(t *testing.T) {
 					Start:    &start,
 					End:      &end,
 					Location: loc,
+				},
+				Sort: &SortOptions{
+					Type: "alphabetical",
 				},
 			},
 		},
@@ -346,49 +467,44 @@ func TestBucketByDateTZ(t *testing.T) {
 	}
 
 	expected := Resultset{
-		Buckets: map[string]*ResultBucket{
-			"Auckland": {
+		Buckets: []*ResultBucket{
+			{
 				Value: "Auckland",
-				Buckets: map[string]*ResultBucket{
-					"2015-12-01T00:00:00+13:00": {
-						Value:   "2015-12-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+				Buckets: []*ResultBucket{
+					{
+						Value: "2015-12-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  nil,
 							"salary:mean": nil,
 							"salary:min":  nil,
 						},
 					},
-					"2016-01-01T00:00:00+13:00": {
-						Value:   "2016-01-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-01-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  150000,
 							"salary:mean": 150000,
 							"salary:min":  150000,
 						},
 					},
-					"2016-02-01T00:00:00+13:00": {
-						Value:   "2016-02-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-02-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  120000,
 							"salary:mean": 105000,
 							"salary:min":  90000,
 						},
 					},
-					"2016-03-01T00:00:00+13:00": {
-						Value:   "2016-03-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-03-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  80000,
 							"salary:mean": 80000,
 							"salary:min":  80000,
 						},
 					},
-					"2016-04-01T00:00:00+13:00": {
-						Value:   "2016-04-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-04-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  nil,
 							"salary:mean": nil,
@@ -397,48 +513,43 @@ func TestBucketByDateTZ(t *testing.T) {
 					},
 				},
 			},
-			"Wellington": {
+			{
 				Value: "Wellington",
-				Buckets: map[string]*ResultBucket{
-					"2015-12-01T00:00:00+13:00": {
-						Value:   "2015-12-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+				Buckets: []*ResultBucket{
+					{
+						Value: "2015-12-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  nil,
 							"salary:mean": nil,
 							"salary:min":  nil,
 						},
 					},
-					"2016-01-01T00:00:00+13:00": {
-						Value:   "2016-01-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-01-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  120000,
 							"salary:mean": 120000,
 							"salary:min":  120000,
 						},
 					},
-					"2016-02-01T00:00:00+13:00": {
-						Value:   "2016-02-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-02-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  120000,
 							"salary:mean": 120000,
 							"salary:min":  120000,
 						},
 					},
-					"2016-03-01T00:00:00+13:00": {
-						Value:   "2016-03-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-03-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:mean": 160000,
 							"salary:max":  160000,
 							"salary:min":  160000,
 						},
 					},
-					"2016-04-01T00:00:00+13:00": {
-						Value:   "2016-04-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-04-01T00:00:00+13:00",
 						Metrics: map[string]interface{}{
 							"salary:max":  nil,
 							"salary:mean": nil,

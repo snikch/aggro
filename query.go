@@ -11,6 +11,13 @@ type Bucket struct {
 	Bucket          *Bucket
 	Field           *Field
 	DatetimeOptions *DatetimeBucketOptions
+	Sort            *SortOptions
+}
+
+type SortOptions struct {
+	Type   string
+	Metric string
+	Desc   bool
 }
 
 // DatetimeBucketOptions provides additional configuration for datetime bucketing.

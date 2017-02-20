@@ -45,53 +45,53 @@ func TestFlattenResultSetSimple(t *testing.T) {
 		},
 	}
 	input := &Resultset{
-		Buckets: map[string]*ResultBucket{
-			"Auckland": {
+		Buckets: []*ResultBucket{
+			{
 				Value: "Auckland",
-				Buckets: map[string]*ResultBucket{
-					"2015-12-01T00:00:00+13:00": {
-						Value:   "2015-12-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+				Buckets: []*ResultBucket{
+					{
+						Value: "2015-12-01T00:00:00+13:00",
+						// Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": nil,
 						},
 					},
-					"2016-01-01T00:00:00+13:00": {
-						Value:   "2016-01-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+					{
+						Value: "2016-01-01T00:00:00+13:00",
+						// Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": 150000,
 						},
 					},
-					"2016-02-01T00:00:00+13:00": {
+					{
 						Value:   "2016-02-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+						Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": 120000,
 						},
 					},
 				},
 			},
-			"Wellington": {
+			{
 				Value: "Wellington",
-				Buckets: map[string]*ResultBucket{
-					"2015-12-01T00:00:00+13:00": {
+				Buckets: []*ResultBucket{
+					{
 						Value:   "2015-12-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+						Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": nil,
 						},
 					},
-					"2016-01-01T00:00:00+13:00": {
+					{
 						Value:   "2016-01-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+						Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": 120000,
 						},
 					},
-					"2016-02-01T00:00:00+13:00": {
+					{
 						Value:   "2016-02-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+						Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": 220000,
 						},
@@ -144,39 +144,39 @@ func TestFlattenResultSetWithHoles(t *testing.T) {
 		},
 	}
 	input := &Resultset{
-		Buckets: map[string]*ResultBucket{
-			"Auckland": {
+		Buckets: []*ResultBucket{
+			{
 				Value: "Auckland",
-				Buckets: map[string]*ResultBucket{
-					"2015-12-01T00:00:00+13:00": {
+				Buckets: []*ResultBucket{
+					{
 						Value:   "2015-12-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+						Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": nil,
 						},
 					},
-					"2016-01-01T00:00:00+13:00": {
+					{
 						Value:   "2016-01-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+						Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": 150000,
 						},
 					},
 				},
 			},
-			"Wellington": {
+			{
 				Value: "Wellington",
-				Buckets: map[string]*ResultBucket{
-					"2015-12-01T00:00:00+13:00": {
+				Buckets: []*ResultBucket{
+					{
 						Value:   "2015-12-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+						Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": nil,
 						},
 					},
-					"2016-02-01T00:00:00+13:00": {
+					{
 						Value:   "2016-02-01T00:00:00+13:00",
-						Buckets: map[string]*ResultBucket{},
+						Buckets: []*ResultBucket{},
 						Metrics: map[string]interface{}{
 							"salary:max": 120000,
 						},
@@ -203,26 +203,26 @@ func TestFlattenResultDeep(t *testing.T) {
 				{
 					"salary:max": 1111,
 				},
-				nil,
 				{
 					"salary:max": 1121,
 				},
+				nil,
 			},
 			{
 				{
 					"salary:max": 1211,
 				},
+				nil,
 				{
 					"salary:max": 1212,
 				},
-				nil,
 			},
 			{
-				nil,
 				nil,
 				{
 					"salary:max": 2321,
 				},
+				nil,
 			},
 		},
 		RowTitles: [][]string{
@@ -232,36 +232,36 @@ func TestFlattenResultDeep(t *testing.T) {
 		},
 		ColumnTitles: [][]string{
 			{"C1", "D1"},
-			{"C1", "D2"},
 			{"C2", "D1"},
+			{"C1", "D2"},
 		},
 	}
 	input := &Resultset{
-		Buckets: map[string]*ResultBucket{
-			"A1": {
+		Buckets: []*ResultBucket{
+			{
 				Value: "A1",
-				Buckets: map[string]*ResultBucket{
-					"B1": {
+				Buckets: []*ResultBucket{
+					{
 						Value: "B1",
-						Buckets: map[string]*ResultBucket{
-							"C1": {
+						Buckets: []*ResultBucket{
+							{
 								Value: "C1",
-								Buckets: map[string]*ResultBucket{
-									"D1": {
+								Buckets: []*ResultBucket{
+									{
 										Value:   "D1",
-										Buckets: map[string]*ResultBucket{},
+										Buckets: []*ResultBucket{},
 										Metrics: map[string]interface{}{
 											"salary:max": 1111,
 										},
 									},
 								},
 							},
-							"C2": {
+							{
 								Value: "C2",
-								Buckets: map[string]*ResultBucket{
-									"D1": {
+								Buckets: []*ResultBucket{
+									{
 										Value:   "D1",
-										Buckets: map[string]*ResultBucket{},
+										Buckets: []*ResultBucket{},
 										Metrics: map[string]interface{}{
 											"salary:max": 1121,
 										},
@@ -270,22 +270,22 @@ func TestFlattenResultDeep(t *testing.T) {
 							},
 						},
 					},
-					"B2": {
+					{
 						Value: "B2",
-						Buckets: map[string]*ResultBucket{
-							"C1": {
+						Buckets: []*ResultBucket{
+							{
 								Value: "C1",
-								Buckets: map[string]*ResultBucket{
-									"D1": {
+								Buckets: []*ResultBucket{
+									{
 										Value:   "D1",
-										Buckets: map[string]*ResultBucket{},
+										Buckets: []*ResultBucket{},
 										Metrics: map[string]interface{}{
 											"salary:max": 1211,
 										},
 									},
-									"D2": {
+									{
 										Value:   "D2",
-										Buckets: map[string]*ResultBucket{},
+										Buckets: []*ResultBucket{},
 										Metrics: map[string]interface{}{
 											"salary:max": 1212,
 										},
@@ -296,18 +296,18 @@ func TestFlattenResultDeep(t *testing.T) {
 					},
 				},
 			},
-			"A2": {
+			{
 				Value: "A2",
-				Buckets: map[string]*ResultBucket{
-					"B3": {
+				Buckets: []*ResultBucket{
+					{
 						Value: "B3",
-						Buckets: map[string]*ResultBucket{
-							"C2": {
+						Buckets: []*ResultBucket{
+							{
 								Value: "C2",
-								Buckets: map[string]*ResultBucket{
-									"D1": {
+								Buckets: []*ResultBucket{
+									{
 										Value:   "D1",
-										Buckets: map[string]*ResultBucket{},
+										Buckets: []*ResultBucket{},
 										Metrics: map[string]interface{}{
 											"salary:max": 2321,
 										},
@@ -332,19 +332,19 @@ func TestFlattenResultDeep(t *testing.T) {
 
 func TestTabulateDepthTooHigh(t *testing.T) {
 	input := &Resultset{
-		Buckets: map[string]*ResultBucket{
-			"A1": {
+		Buckets: []*ResultBucket{
+			{
 				Value: "A1",
-				Buckets: map[string]*ResultBucket{
-					"B1": {
+				Buckets: []*ResultBucket{
+					{
 						Value: "B1",
-						Buckets: map[string]*ResultBucket{
-							"C1": {
+						Buckets: []*ResultBucket{
+							{
 								Value: "C1",
-								Buckets: map[string]*ResultBucket{
-									"D1": {
+								Buckets: []*ResultBucket{
+									{
 										Value:   "D1",
-										Buckets: map[string]*ResultBucket{},
+										Buckets: []*ResultBucket{},
 										Metrics: map[string]interface{}{
 											"salary:max": 1111,
 										},

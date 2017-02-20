@@ -6,15 +6,16 @@ import (
 )
 
 type Resultset struct {
-	Errors  []error                  `json:"errors"`
-	Buckets map[string]*ResultBucket `json:"buckets"`
+	Errors  []error         `json:"errors"`
+	Buckets []*ResultBucket `json:"buckets"`
 }
 
 type ResultBucket struct {
-	Value      string                   `json:"value"`
-	Metrics    map[string]interface{}   `json:"metrics"`
-	Buckets    map[string]*ResultBucket `json:"buckets"`
-	sourceRows []map[string]Cell
+	Value        string                 `json:"value"`
+	Metrics      map[string]interface{} `json:"metrics"`
+	Buckets      []*ResultBucket        `json:"buckets"`
+	bucketLookup map[string]*ResultBucket
+	sourceRows   []map[string]Cell
 }
 
 // ResultTable represents a Resultset split into row / columns at a depth.
@@ -24,6 +25,7 @@ type ResultTable struct {
 	ColumnTitles [][]string                 `json:"column_titles"`
 }
 
+// Concrete errors.
 var (
 	ErrTargetDepthTooLow     = fmt.Errorf("Tabulate: target depth should be 1 or above.")
 	ErrTargetDepthNotReached = fmt.Errorf("Tabulate: reached deepest bucket before hitting target depth.")

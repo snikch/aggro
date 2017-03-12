@@ -53,7 +53,7 @@ func (p *queryProcessor) aggregate() {
 	buckets = p.fillDatetimeGaps(buckets)
 
 	p.results = &Resultset{
-		Buckets: buckets,
+		Buckets: p.sort(buckets),
 	}
 }
 
@@ -106,7 +106,7 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 
 	// Bump depth and recurse to next level, passing in the children as the results.
 	depth++
-	bucket.Buckets = p.recurse(depth, index, row, aggregate.Bucket, bucket.Buckets)
+	bucket.bucketLookup = p.recurse(depth, index, row, aggregate.Bucket, bucket.bucketLookup)
 
 	// Update the current results bucket with the new values, then return.
 	results[value] = bucket
@@ -117,8 +117,8 @@ func ensureValueBucket(results map[string]*ResultBucket, value string) *ResultBu
 	bucket := results[value]
 	if bucket == nil {
 		bucket = &ResultBucket{
-			Value:   value,
-			Buckets: map[string]*ResultBucket{},
+			Value:        value,
+			bucketLookup: map[string]*ResultBucket{},
 		}
 	}
 	return bucket
@@ -165,7 +165,7 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 			max = &end
 		}
 		// Now extend the start and end depending on the values in the results.
-		for key, _ := range results {
+		for key := range results {
 			value := key
 			// Min being nil means max is too. Set them to the first result.
 			if min == nil {
@@ -218,10 +218,14 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 
 	// Now recurse into any children result sets.
 	for _, result := range results {
-		result.Buckets = p.fillBucketDatetimeGaps(bucket.Bucket, result.Buckets)
+		result.bucketLookup = p.fillBucketDatetimeGaps(bucket.Bucket, result.bucketLookup)
 	}
 
 	return results
+}
+
+func (p *queryProcessor) sort(results map[string]*ResultBucket) []*ResultBucket {
+	return sortMap(p.query.Bucket, results)
 }
 
 func (p *queryProcessor) measure() {

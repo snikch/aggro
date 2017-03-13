@@ -564,3 +564,132 @@ func TestBucketByDateTZ(t *testing.T) {
 	em, _ := json.MarshalIndent(expected, "", "  ")
 	Expect(rm).To(MatchJSON(em))
 }
+
+func TestBucketByRange(t *testing.T) {
+	RegisterTestingT(t)
+	dataset := &Dataset{
+		Table: table,
+	}
+
+	err := dataset.AddRows(rows...)
+	if err != nil {
+		t.Fatalf("Unexpected error creating dataset: %s", err.Error())
+	}
+
+	query := &Query{
+		Metrics: []Metric{
+			{Type: "count", Field: "salary"},
+		},
+		Bucket: &Bucket{
+			Field: &Field{
+				Name: "location",
+				Type: "string",
+			},
+			Sort: &SortOptions{
+				Type: "alphabetical",
+			},
+			Bucket: &Bucket{
+				Field: &Field{
+					Name: "salary",
+					Type: "number",
+				},
+				RangeOptions: &RangeBucketOptions{
+					Period: []interface{}{
+						20000,
+						50000,
+						100000,
+						150000,
+						200000,
+						300000,
+					},
+				},
+				Sort: &SortOptions{
+					Type: "numerical",
+					Desc: false,
+				},
+			},
+		},
+	}
+
+	results, err := dataset.Run(query)
+	if err != nil {
+		t.Fatalf("Unexpected error running query: %s", err.Error())
+	}
+	if results == nil {
+		t.Fatalf("Unexpectedly got an empty resultset running query")
+	}
+
+	expected := Resultset{
+		Buckets: []*ResultBucket{
+			{
+				Value: "Auckland",
+				Buckets: []*ResultBucket{
+					{
+						Value:   "20000",
+						Metrics: nil,
+					},
+					{
+						Value:   "50000",
+						Metrics: nil,
+					},
+					{
+						Value: "100000",
+						Metrics: map[string]interface{}{
+							"salary:count": 2,
+						},
+					},
+					{
+						Value: "150000",
+						Metrics: map[string]interface{}{
+							"salary:count": 2,
+						},
+					},
+					{
+						Value:   "200000",
+						Metrics: nil,
+					},
+					{
+						Value:   "300000",
+						Metrics: nil,
+					},
+				},
+			},
+			{
+				Value: "Wellington",
+				Buckets: []*ResultBucket{
+					{
+						Value:   "20000",
+						Metrics: nil,
+					},
+					{
+						Value:   "50000",
+						Metrics: nil,
+					},
+					{
+						Value:   "100000",
+						Metrics: nil,
+					},
+					{
+						Value: "150000",
+						Metrics: map[string]interface{}{
+							"salary:count": 2,
+						},
+					},
+					{
+						Value: "200000",
+						Metrics: map[string]interface{}{
+							"salary:count": 1,
+						},
+					},
+					{
+						Value:   "300000",
+						Metrics: nil,
+					},
+				},
+			},
+		},
+	}
+	rm, _ := json.Marshal(*results)
+	em, _ := json.Marshal(expected)
+	Expect(rm).To(MatchJSON(em))
+}

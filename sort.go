@@ -1,6 +1,9 @@
 package aggro
 
-import "sort"
+import (
+	"sort"
+	"strconv"
+)
 
 // Sortable provides an interface that various sorters can implement to compare
 // two result buckets. This enables access to both the value and any metrics
@@ -21,6 +24,9 @@ func sortableForOptions(options *SortOptions) Sortable {
 	case "alphabetical":
 		s := AlphabeticalSortable(!options.Desc)
 		return &s
+	case "numerical":
+		s := NumericalSortable(!options.Desc)
+		return &s
 	}
 	return nil
 }
@@ -32,6 +38,18 @@ type AlphabeticalSortable bool
 // Less implements Sortable by comparing the value field of each result.
 func (sortable *AlphabeticalSortable) Less(a, b *ResultBucket) bool {
 	return a.Value < b.Value == bool(*sortable)
+}
+
+// NumericalSortable is a simple sorter that sorts numerically in the
+// direction of the boolean, true meaning ascending and false being descending.
+type NumericalSortable bool
+
+// Less implements Sortable by comparing the value field of each result.
+func (sortable *NumericalSortable) Less(a, b *ResultBucket) bool {
+	// Cast bucket.Value (str) to float for comparison.
+	a1, _ := strconv.ParseFloat(a.Value, 64)
+	b1, _ := strconv.ParseFloat(b.Value, 64)
+	return a1 < b1 == bool(*sortable)
 }
 
 // bucketSorter is an implementation of the sort.Sort interface that is capable

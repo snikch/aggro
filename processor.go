@@ -262,14 +262,8 @@ func (p *queryProcessor) fillBucketRangeGaps(bucket *Bucket, results map[string]
 			switch i := p.(type) {
 			case float64:
 				v = i
-			case float32:
-				v = float64(i)
-			case int32:
-				v = float64(i)
-			case int64:
-				v = float64(i)
-			case int:
-				v = float64(i)
+			case float32, int, int32, int64:
+				v = i.(float64)
 			}
 
 			// Make sure this period exists.

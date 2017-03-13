@@ -18,8 +18,14 @@ func rangeValueForPeriod(value *decimal.Decimal, period []interface{}) (decimal.
 		switch i := p.(type) {
 		case float64:
 			v = i
-		case float32, int, int32, int64:
-			v = i.(float64)
+		case float32:
+			v = float64(i)
+		case int32:
+			v = float64(i)
+		case int64:
+			v = float64(i)
+		case int:
+			v = float64(i)
 		default:
 			return decimal.NewFromFloat(0.0), errors.New("Invalid range values supplied - NaN")
 		}

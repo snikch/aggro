@@ -146,6 +146,12 @@ func (cell *NumberCell) MeasurableCell() MeasurableCell {
 	return cell
 }
 
+// ValueForPeriod returns the start of a given period.
+func (cell *NumberCell) ValueForPeriod(period []interface{}) (string, error) {
+	value, err := rangeValueForPeriod(cell.value, period)
+	return value.String(), err
+}
+
 type DatetimeCell struct {
 	value *time.Time
 	field *Field

@@ -14,6 +14,7 @@ type Bucket struct {
 	Field           *Field
 	DatetimeOptions *DatetimeBucketOptions
 	Sort            *SortOptions
+	RangeOptions    *RangeBucketOptions
 }
 
 // SortOptions represent how this Bucket should be sorted.
@@ -33,4 +34,9 @@ type DatetimeBucketOptions struct {
 	Period DatetimePeriod
 	// Datetimes should be bucketed based on the date in this location.
 	Location *time.Location
+}
+
+// RangeBucketOptions provides additional configuration for custom range bucketing.
+type RangeBucketOptions struct {
+	Period []interface{}
 }

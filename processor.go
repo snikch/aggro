@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 // MetricDelimeter is a string used to separate metric field's from names.
@@ -17,6 +19,7 @@ type queryProcessor struct {
 	err         error
 	results     *Resultset
 	hasDatetime bool
+	hasRange    bool
 }
 
 func (p *queryProcessor) Run() (*Resultset, error) {
@@ -51,6 +54,8 @@ func (p *queryProcessor) aggregate() {
 	}
 
 	buckets = p.fillDatetimeGaps(buckets)
+
+	buckets = p.fillRangeGaps(buckets)
 
 	p.results = &Resultset{
 		Buckets: p.sort(buckets),
@@ -89,6 +94,16 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 		value, p.err = tCell.ValueForPeriod(aggregate.DatetimeOptions.Period, aggregate.DatetimeOptions.Location)
 		if p.err != nil {
 			return results
+		}
+	case *NumberCell:
+		if aggregate.RangeOptions != nil {
+			p.hasRange = true
+			value, p.err = tCell.ValueForPeriod(aggregate.RangeOptions.Period)
+			if p.err != nil {
+				return results
+			}
+		} else {
+			p.err = fmt.Errorf("Non aggregatable cell found without RangeOptions at depth %d, index %d", depth, index)
 		}
 	default:
 		p.err = fmt.Errorf("Non aggregatable cell found at depth %d, index %d", depth, index)
@@ -135,7 +150,7 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 	if bucket == nil || len(results) < 0 {
 		return results
 	}
-	if bucket.Field.Type == fieldTypeDatetime {
+	if (bucket.Field.Type == fieldTypeDatetime) || p.hasRange {
 		// Get the max and min values.
 		var min, max *string
 		// Set the min to the start if there is one.
@@ -226,6 +241,49 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 
 func (p *queryProcessor) sort(results map[string]*ResultBucket) []*ResultBucket {
 	return sortMap(p.query.Bucket, results)
+}
+
+func (p *queryProcessor) fillRangeGaps(results map[string]*ResultBucket) map[string]*ResultBucket {
+	if !p.hasRange {
+		return results
+	}
+	return p.fillBucketRangeGaps(p.query.Bucket, results)
+}
+
+func (p *queryProcessor) fillBucketRangeGaps(bucket *Bucket, results map[string]*ResultBucket) map[string]*ResultBucket {
+	if bucket == nil || len(results) < 0 {
+		return results
+	}
+
+	if (bucket.Field.Type == fieldTypeNumber) && (bucket.RangeOptions.Period != nil) {
+		for _, p := range bucket.RangeOptions.Period {
+
+			var v float64
+			switch i := p.(type) {
+			case float64:
+				v = i
+			case float32:
+				v = float64(i)
+			case int32:
+				v = float64(i)
+			case int64:
+				v = float64(i)
+			case int:
+				v = float64(i)
+			}
+
+			// Make sure this period exists.
+			index := decimal.NewFromFloat(v)
+			results[index.String()] = ensureValueBucket(results, index.String())
+		}
+	}
+
+	// Now recurse into any children result sets.
+	for _, result := range results {
+		result.bucketLookup = p.fillBucketRangeGaps(bucket.Bucket, result.bucketLookup)
+	}
+
+	return results
 }
 
 func (p *queryProcessor) measure() {

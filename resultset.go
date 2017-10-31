@@ -5,11 +5,14 @@ import (
 	"strings"
 )
 
+// Resultset represents a complete set of result buckets and any associated errors.
 type Resultset struct {
-	Errors  []error         `json:"errors"`
-	Buckets []*ResultBucket `json:"buckets"`
+	Errors      []error         `json:"errors"`
+	Buckets     []*ResultBucket `json:"buckets"`
+	Composition []interface{}   `json:"-"`
 }
 
+// ResultBucket represents recursively built metrics for our tablular data.
 type ResultBucket struct {
 	Value        string                 `json:"value"`
 	Metrics      map[string]interface{} `json:"metrics"`
@@ -27,8 +30,8 @@ type ResultTable struct {
 
 // Concrete errors.
 var (
-	ErrTargetDepthTooLow     = fmt.Errorf("Tabulate: target depth should be 1 or above.")
-	ErrTargetDepthNotReached = fmt.Errorf("Tabulate: reached deepest bucket before hitting target depth.")
+	ErrTargetDepthTooLow     = fmt.Errorf("Tabulate: target depth should be 1 or above")
+	ErrTargetDepthNotReached = fmt.Errorf("Tabulate: reached deepest bucket before hitting target depth")
 )
 
 // Tabulate takes a Resultset and converts it to tabular data.
@@ -98,7 +101,8 @@ func buildLookup(key []string, depth, targetDepth int, table *ResultTable, looku
 			table.ColumnTitles = append(table.ColumnTitles, key[targetDepth:])
 			lookup.columnLookup[columnKey] = true
 		}
-		lookup.cells[strings.Join(key, lookupKeyDelimiter)] = bucket.Metrics
+		m := bucket.Metrics
+		lookup.cells[strings.Join(key, lookupKeyDelimiter)] = m
 		return nil
 	}
 

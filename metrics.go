@@ -8,6 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// Metric represents a type of measurement to be applied to our dataset.
 type Metric struct {
 	Type  string
 	Field string
@@ -244,7 +245,7 @@ func (a *cardinality) AddDatum(datum interface{}) {
 		a.values = map[interface{}]int{}
 	}
 
-	// Track frequency of our values within the dataset. 
+	// Track frequency of our values within the dataset.
 	switch t := datum.(type) {
 	case *decimal.Decimal:
 		floatVal, _ := t.Float64()

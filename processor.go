@@ -18,6 +18,7 @@ type queryProcessor struct {
 	measurables []*[]Cell
 	err         error
 	results     *Resultset
+	composition []interface{}
 	hasDatetime bool
 	hasRange    bool
 }
@@ -58,7 +59,8 @@ func (p *queryProcessor) aggregate() {
 	buckets = p.fillRangeGaps(buckets)
 
 	p.results = &Resultset{
-		Buckets: p.sort(buckets),
+		Buckets:     p.sort(buckets),
+		Composition: p.composition,
 	}
 }
 
@@ -84,10 +86,12 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 
 	// And grab the underlying aggregatable string value.
 	value := ""
+
 	switch tCell := cell.(type) {
 	case *StringCell:
 		// String Cell's are easy, it's just the value.
 		value = tCell.value
+		p.composition = append(p.composition, tCell.data)
 	case *DatetimeCell:
 		p.hasDatetime = true
 		// Datetime Cell's are a bit more complicated, and need the period value.
@@ -95,6 +99,7 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 		if p.err != nil {
 			return results
 		}
+		p.composition = append(p.composition, tCell.data)
 	case *NumberCell:
 		if aggregate.RangeOptions != nil {
 			p.hasRange = true
@@ -102,6 +107,7 @@ func (p *queryProcessor) recurse(depth, index int, row map[string]Cell, aggregat
 			if p.err != nil {
 				return results
 			}
+			p.composition = append(p.composition, tCell.data)
 		} else {
 			p.err = fmt.Errorf("Non aggregatable cell found without RangeOptions at depth %d, index %d", depth, index)
 		}
@@ -213,12 +219,14 @@ func (p *queryProcessor) fillBucketDatetimeGaps(bucket *Bucket, results map[stri
 			if bucket.Bucket == nil {
 				p.tipBuckets[results[loopValue]] = true
 			}
+
 			// Now bump the date up one period, and loop.
 			date, err := datetimeAddPeriod(&loopDate, bucket.DatetimeOptions.Period)
 			if err != nil {
 				p.err = err
 				return results
 			}
+
 			loopDate = *date
 			loopValue, p.err = datetimeValueForPeriod(
 				&loopDate,
